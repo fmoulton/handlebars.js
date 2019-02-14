@@ -1,5 +1,3 @@
-/*global shouldCompileTo, shouldCompileToWithPartials */
-
 describe('whitespace control', function() {
   it('should strip whitespace around mustache calls', function() {
     var hash = {foo: 'bar<'};
@@ -66,6 +64,9 @@ describe('whitespace control', function() {
     shouldCompileToWithPartials('foo {{~> dude~}} ', [{}, {}, {dude: 'bar'}], true, 'foobar');
     shouldCompileToWithPartials('foo {{> dude~}} ', [{}, {}, {dude: 'bar'}], true, 'foo bar');
     shouldCompileToWithPartials('foo {{> dude}} ', [{}, {}, {dude: 'bar'}], true, 'foo bar ');
+
+    shouldCompileToWithPartials('foo\n {{~> dude}} ', [{}, {}, {dude: 'bar'}], true, 'foobar');
+    shouldCompileToWithPartials('foo\n {{> dude}} ', [{}, {}, {dude: 'bar'}], true, 'foo\n bar');
   });
 
   it('should only strip whitespace once', function() {

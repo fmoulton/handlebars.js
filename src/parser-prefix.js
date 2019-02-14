@@ -1,2 +1,1 @@
-/* jshint ignore:start */
-/* istanbul ignore next */
+// File ignored in coverage tests via setting in .istanbul.yml

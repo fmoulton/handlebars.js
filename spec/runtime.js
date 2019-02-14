@@ -1,5 +1,3 @@
-/*globals Handlebars, shouldThrow */
-
 describe('runtime', function() {
   describe('#template', function() {
     it('should throw on invalid templates', function() {
@@ -16,48 +14,39 @@ describe('runtime', function() {
     it('should throw on version mismatch', function() {
       shouldThrow(function() {
         Handlebars.template({
-          main: true,
+          main: {},
           compiler: [Handlebars.COMPILER_REVISION + 1]
         });
       }, Error, /Template was precompiled with a newer version of Handlebars than the current runtime/);
       shouldThrow(function() {
         Handlebars.template({
-          main: true,
+          main: {},
           compiler: [Handlebars.COMPILER_REVISION - 1]
         });
       }, Error, /Template was precompiled with an older version of Handlebars than the current runtime/);
       shouldThrow(function() {
         Handlebars.template({
-          main: true
+          main: {}
         });
       }, Error, /Template was precompiled with an older version of Handlebars than the current runtime/);
     });
   });
 
-  describe('#child', function() {
-    if (!Handlebars.compile) {
+  describe('#noConflict', function() {
+    if (!CompilerContext.browser) {
       return;
     }
 
-    it('should throw for depthed methods without depths', function() {
-      shouldThrow(function() {
-        var template = Handlebars.compile('{{#foo}}{{../bar}}{{/foo}}');
-        // Calling twice to hit the non-compiled case.
-        template._setup({});
-        template._setup({});
-        template._child(1);
-      }, Error, 'must pass parent depths');
-    });
-    it('should expose child template', function() {
-      var template = Handlebars.compile('{{#foo}}bar{{/foo}}');
-        // Calling twice to hit the non-compiled case.
-      equal(template._child(1)(), 'bar');
-      equal(template._child(1)(), 'bar');
-    });
-    it('should render depthed content', function() {
-      var template = Handlebars.compile('{{#foo}}{{../bar}}{{/foo}}');
-        // Calling twice to hit the non-compiled case.
-      equal(template._child(1, undefined, [{bar: 'baz'}])(), 'baz');
+    it('should reset on no conflict', function() {
+      var reset = Handlebars;
+      Handlebars.noConflict();
+      equal(Handlebars, 'no-conflict');
+
+      Handlebars = 'really, none';
+      reset.noConflict();
+      equal(Handlebars, 'really, none');
+
+      Handlebars = reset;
     });
   });
 });

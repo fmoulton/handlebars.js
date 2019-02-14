@@ -1,5 +1,3 @@
-/*global Handlebars, shouldThrow */
-
 describe('compiler', function() {
   if (!Handlebars.compile) {
     return;
@@ -40,12 +38,61 @@ describe('compiler', function() {
       }, Error, 'You must pass a string or Handlebars AST to Handlebars.compile. You passed [object Object]');
     });
 
-    it('can utilize AST instance', function() {
-      equal(Handlebars.compile(new Handlebars.AST.ProgramNode([ new Handlebars.AST.ContentNode("Hello")], {}))(), 'Hello');
+    it('should include the location in the error (row and column)', function() {
+      try {
+        Handlebars.compile(' \n  {{#if}}\n{{/def}}')();
+        equal(true, false, 'Statement must throw exception. This line should not be executed.');
+      } catch (err) {
+        equal(err.message, 'if doesn\'t match def - 2:5', 'Checking error message');
+        if (Object.getOwnPropertyDescriptor(err, 'column').writable) {
+          // In Safari 8, the column-property is read-only. This means that even if it is set with defineProperty,
+          // its value won't change (https://github.com/jquery/esprima/issues/1290#issuecomment-132455482)
+          // Since this was neither working in Handlebars 3 nor in 4.0.5, we only check the column for other browsers.
+          equal(err.column, 5, 'Checking error column');
+        }
+        equal(err.lineNumber, 2, 'Checking error row');
+      }
     });
 
-    it("can pass through an empty string", function() {
+    it('should include the location as enumerable property', function() {
+      try {
+        Handlebars.compile(' \n  {{#if}}\n{{/def}}')();
+        equal(true, false, 'Statement must throw exception. This line should not be executed.');
+      } catch (err) {
+        equal(err.propertyIsEnumerable('column'), true, 'Checking error column');
+      }
+    });
+
+    it('can utilize AST instance', function() {
+      equal(Handlebars.compile({
+        type: 'Program',
+        body: [ {type: 'ContentStatement', value: 'Hello'}]
+      })(), 'Hello');
+    });
+
+    it('can pass through an empty string', function() {
       equal(Handlebars.compile('')(), '');
+    });
+
+    it('throws on desupported options', function() {
+      shouldThrow(function() {
+        Handlebars.compile('Dudes', {trackIds: true});
+      }, Error, 'TrackIds and stringParams are no longer supported. See Github #1145');
+      shouldThrow(function() {
+        Handlebars.compile('Dudes', {stringParams: true});
+      }, Error, 'TrackIds and stringParams are no longer supported. See Github #1145');
+    });
+
+    it('should not modify the options.data property(GH-1327)', function() {
+      var options = {data: [{a: 'foo'}, {a: 'bar'}]};
+      Handlebars.compile('{{#each data}}{{@index}}:{{a}} {{/each}}', options)();
+      equal(JSON.stringify(options, 0, 2), JSON.stringify({data: [{a: 'foo'}, {a: 'bar'}]}, 0, 2));
+    });
+
+    it('should not modify the options.knownHelpers property(GH-1327)', function() {
+      var options = {knownHelpers: {}};
+      Handlebars.compile('{{#each data}}{{@index}}:{{a}} {{/each}}', options)();
+      equal(JSON.stringify(options, 0, 2), JSON.stringify({knownHelpers: {}}, 0, 2));
     });
   });
 
@@ -53,17 +100,20 @@ describe('compiler', function() {
     it('should fail with invalid input', function() {
       shouldThrow(function() {
         Handlebars.precompile(null);
-      }, Error, 'You must pass a string or Handlebars AST to Handlebars.precompile. You passed null');
+      }, Error, 'You must pass a string or Handlebars AST to Handlebars.compile. You passed null');
       shouldThrow(function() {
         Handlebars.precompile({});
-      }, Error, 'You must pass a string or Handlebars AST to Handlebars.precompile. You passed [object Object]');
+      }, Error, 'You must pass a string or Handlebars AST to Handlebars.compile. You passed [object Object]');
     });
 
     it('can utilize AST instance', function() {
-      equal(/return "Hello"/.test(Handlebars.precompile(new Handlebars.AST.ProgramNode([ new Handlebars.AST.ContentNode("Hello")]), {})), true);
+      equal(/return "Hello"/.test(Handlebars.precompile({
+        type: 'Program',
+        body: [ {type: 'ContentStatement', value: 'Hello'}]
+      })), true);
     });
 
-    it("can pass through an empty string", function() {
+    it('can pass through an empty string', function() {
       equal(/return ""/.test(Handlebars.precompile('')), true);
     });
   });
